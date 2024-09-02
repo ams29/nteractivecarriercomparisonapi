@@ -9,13 +9,12 @@ openai.api_key = os.getenv("OPENAI_API_KEY")  # Load this from environment varia
 
 app = FastAPI()
 
-# Pydantic model for the carrier rate comparison request
-class CarrierRateRequest(BaseModel):
+# Pydantic model for the carrier comparison request
+class CarrierComparisonRequest(BaseModel):
     carriers: list
-    years: int = 4
 
-# Function to call the OpenAI Chat API to generate carrier rate comparison data
-def get_carrier_rate_comparison(carriers, years=4):
+# Function to call the OpenAI Chat API to generate carrier comparison data
+def get_interactive_carrier_comparison(carriers):
     prompt = f"""Generate comparison data for the following carriers: {', '.join(carriers)}.
     For each carrier, provide:
     - Onboarding Time (in days)
@@ -34,28 +33,26 @@ def get_carrier_rate_comparison(carriers, years=4):
         ...
       ]
     }}
-
     """
 
-    response = client.chat.completions.create(
+    response = openai.chat.completion.create(
         model="gpt-4o-mini",
-        response_format = { "type": "json_object" },
         messages=[
             {"role": "system", "content": "You are a helpful assistant that generates realistic shipping carrier data."},
             {"role": "user", "content": prompt}
         ]
     )
 
-    return json.loads(response.choices[0].message.content)
+    return json.loads(response.choices[0].message['content'])
 
-@app.post("/carrier-rate-comparison/")
-async def carrier_rate_comparison(request: CarrierRateRequest):
-    # Call the function to get the carrier rate comparison data
-    rate_comparison_data = get_carrier_rate_comparison(request.carriers, request.years)
+@app.post("/carrier-interactive-comparison/")
+async def carrier_interactive_comparison(request: CarrierComparisonRequest):
+    # Call the function to get the carrier comparison data
+    comparison_data = get_interactive_carrier_comparison(request.carriers)
     
     # Return the response data
-    return rate_comparison_data
+    return comparison_data
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the Carrier Rate Comparison API!"}
+    return {"message": "Welcome to the Carrier Interactive Comparison API!"}
