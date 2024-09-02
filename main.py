@@ -1,9 +1,21 @@
 from fastapi import FastAPI
+from pydantic import BaseModel
+import openai
+import os
 import json
+
+# Initialize OpenAI API with your API key
+openai.api_key = os.getenv("OPENAI_API_KEY")  # Load this from environment variables or set it directly.
 
 app = FastAPI()
 
-def get_interactive_carrier_comparison(carriers):
+# Pydantic model for the carrier rate comparison request
+class CarrierRateRequest(BaseModel):
+    carriers: list
+    years: int = 4
+
+# Function to call the OpenAI Chat API to generate carrier rate comparison data
+def get_carrier_rate_comparison(carriers, years=4):
     prompt = f"""Generate comparison data for the following carriers: {', '.join(carriers)}.
     For each carrier, provide:
     - Onboarding Time (in days)
@@ -36,9 +48,14 @@ def get_interactive_carrier_comparison(carriers):
 
     return json.loads(response.choices[0].message.content)
 
-@app.post("/interactive-comparison/")
-def interactive_comparison(carriers: list):
-    return get_interactive_carrier_comparison(carriers)
+@app.post("/carrier-rate-comparison/")
+async def carrier_rate_comparison(request: CarrierRateRequest):
+    # Call the function to get the carrier rate comparison data
+    rate_comparison_data = get_carrier_rate_comparison(request.carriers, request.years)
+    
+    # Return the response data
+    return rate_comparison_data
 
-# Example usage in FastAPI:
-# Run the app with `uvicorn your_script_name:app --reload`
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to the Carrier Rate Comparison API!"}
